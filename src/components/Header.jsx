@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LayoutGrid, Bell } from 'lucide-react';
 import styles from './Header.module.css';
 
-export const Header = ({ title = "HRMS Global", userPhoto, userRole = "employee" }) => {
+export const Header = ({ title = "Executive", userPhoto, userRole = "employee" }) => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);

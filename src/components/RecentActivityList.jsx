@@ -13,32 +13,46 @@ export const RecentActivityList = ({
   title = "Recent Activity", 
   activities = [], 
   interactive = false,
-  onItemClick 
+  onItemClick,
+  onViewAll
 }) => {
   
-  const getActivityIcon = (type) => {
+  const getActivityIcon = (type, severity = 'info') => {
+    let icon = Asterisk;
+    const severityCap = severity.charAt(0).toUpperCase() + severity.slice(1);
+    let className = styles[`badge${severityCap}`] || styles.badgeInfo;
+
     switch (type) {
       case 'new_hire':
-        return { icon: UserPlus, class: styles.badgeNewHire };
+        icon = UserPlus;
+        break;
       case 'payroll_approval':
       case 'leave_approve':
-        return { icon: BadgeCheck, class: styles.badgeApproval };
+        icon = BadgeCheck;
+        break;
       case 'leave_request':
-        return { icon: Asterisk, class: styles.badgeLeave };
+        icon = Asterisk;
+        break;
       case 'check_in':
-        return { icon: LogIn, class: styles.badgeCheckIn };
+        icon = LogIn;
+        break;
       case 'payroll':
-        return { icon: Receipt, class: styles.badgePayroll };
+        icon = Receipt;
+        break;
       default:
-        return { icon: Asterisk, class: styles.badgeApproval };
+        icon = Asterisk;
+        break;
     }
+    return { icon, class: className };
   };
 
   return (
     <div className={styles.activityContainer}>
       <div className={styles.header}>
         <h3 className={styles.title}>{title}</h3>
-        <button className={styles.viewAll}>View All</button>
+        {onViewAll && (
+          <button className={styles.viewAll} onClick={onViewAll}>View All</button>
+        )}
       </div>
       
       <div className={styles.list}>
@@ -54,7 +68,7 @@ export const RecentActivityList = ({
           </div>
         ) : (
           activities.map((act) => {
-            const config = getActivityIcon(act.type);
+            const config = getActivityIcon(act.type, act.severity);
             const Icon = config.icon;
             
             return (

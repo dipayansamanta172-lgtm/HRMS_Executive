@@ -9,7 +9,18 @@ const departmentController = {
     }
 
     try {
-      const [depts] = await db.query('SELECT * FROM departments WHERE company_id = ? ORDER BY name ASC', [companyId]);
+      const query = `
+        SELECT d.*, 
+          COUNT(e.id) AS employee_count,
+          head.name AS department_head_name
+        FROM departments d 
+        LEFT JOIN employees e ON d.id = e.department_id AND e.status != 'Deleted'
+        LEFT JOIN employees head ON d.department_head = head.id
+        WHERE d.company_id = ?
+        GROUP BY d.id
+        ORDER BY d.name ASC
+      `;
+      const [depts] = await db.query(query, [companyId]);
       return res.status(200).json(depts);
     } catch (err) {
       console.error('Fetch departments error:', err);
@@ -18,7 +29,7 @@ const departmentController = {
   },
 
   createDepartment: async (req, res) => {
-    const { name, department_code } = req.body;
+    const { name, department_code, description, department_head, status } = req.body;
     
     if (!name || !department_code) {
       return res.status(400).json({ message: 'Name and department code are required fields.' });
@@ -41,8 +52,16 @@ const departmentController = {
       }
 
       const [result] = await db.query(
-        'INSERT INTO departments (name, department_code, created_by, company_id) VALUES (?, ?, ?, ?)',
-        [name.toUpperCase(), department_code.toUpperCase(), req.user.id, companyId]
+        'INSERT INTO departments (name, department_code, description, department_head, status, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          name.toUpperCase(), 
+          department_code.toUpperCase(), 
+          description || null, 
+          department_head || null, 
+          status || 'Active', 
+          req.user.id, 
+          companyId
+        ]
       );
 
       // Audit Log
@@ -55,6 +74,9 @@ const departmentController = {
           id: result.insertId,
           name: name.toUpperCase(),
           department_code: department_code.toUpperCase(),
+          description: description || null,
+          department_head: department_head || null,
+          status: status || 'Active',
           created_by: req.user.id,
         },
       });
@@ -66,7 +88,7 @@ const departmentController = {
 
   updateDepartment: async (req, res) => {
     const { id } = req.params;
-    const { name, department_code } = req.body;
+    const { name, department_code, description, department_head, status } = req.body;
 
     if (!name || !department_code) {
       return res.status(400).json({ message: 'Name and department code are required fields.' });
@@ -95,8 +117,8 @@ const departmentController = {
       }
 
       await db.query(
-        'UPDATE departments SET name = ?, department_code = ? WHERE id = ?',
-        [name.toUpperCase(), department_code.toUpperCase(), id]
+        'UPDATE departments SET name = ?, department_code = ?, description = ?, department_head = ?, status = ? WHERE id = ?',
+        [name.toUpperCase(), department_code.toUpperCase(), description || null, department_head || null, status || 'Active', id]
       );
 
       // Audit Log
@@ -105,7 +127,14 @@ const departmentController = {
       return res.status(200).json({
         success: true,
         message: 'Department updated successfully.',
-        department: { id, name: name.toUpperCase(), department_code: department_code.toUpperCase() },
+        department: { 
+          id, 
+          name: name.toUpperCase(), 
+          department_code: department_code.toUpperCase(),
+          description: description || null,
+          department_head: department_head || null,
+          status: status || 'Active'
+        },
       });
     } catch (err) {
       console.error('Update department error:', err);
@@ -125,6 +154,13 @@ const departmentController = {
       const [existing] = await db.query('SELECT * FROM departments WHERE id = ? AND company_id = ?', [id, companyId]);
       if (existing.length === 0) {
         return res.status(404).json({ message: 'Department not found in your company.' });
+      }
+
+      const [employees] = await db.query('SELECT COUNT(*) AS count FROM employees WHERE department_id = ? AND status != "Deleted"', [id]);
+      if (employees[0].count > 0) {
+        return res.status(400).json({ 
+          message: `This department cannot be deleted because it currently has ${employees[0].count} employee(s). Please reassign those employees before deleting the department.`
+        });
       }
 
       await db.query('DELETE FROM departments WHERE id = ?', [id]);

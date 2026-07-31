@@ -116,7 +116,7 @@
 
 .inputFieldWrapperFocus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(59, 44, 212, 0.1);
+  box-shadow: 0 0 0 3px rgba(181, 136, 99, 0.25);
 }
 
 .inputIcon {
@@ -163,7 +163,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.4);
+  background-color: rgba(18, 19, 20, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;

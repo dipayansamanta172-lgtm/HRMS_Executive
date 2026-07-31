@@ -139,7 +139,16 @@ const payrollController = {
           photo: r.photo,
           role: r.role,
           salary: `$${netSalary.toLocaleString()}`,
-          status: r.payroll_id ? r.payroll_status : 'Pending'
+          status: r.payroll_id ? r.payroll_status : 'Pending',
+          basic_salary: r.basic_salary,
+          hra: r.hra,
+          travel_allowance: r.travel_allowance,
+          medical_allowance: r.medical_allowance,
+          other_allowances: r.other_allowances,
+          performance_bonus: r.performance_bonus,
+          provident_fund: r.provident_fund,
+          professional_tax: r.professional_tax,
+          other_deductions: r.other_deductions
         };
       });
 
@@ -153,6 +162,7 @@ const payrollController = {
   // PUT /api/payroll/:id/approve (Admin approve / release payroll for employee)
   approvePayroll: async (req, res) => {
     const employeeId = req.params.id; // numeric employee_id
+    const { bonus, other_allowances, deductions } = req.body || {};
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
@@ -182,6 +192,14 @@ const payrollController = {
 
       const sc = salaries[0];
 
+      // Custom Inputs
+      const customBonus = bonus !== undefined ? parseFloat(bonus) : parseFloat(sc.performance_bonus);
+      const customOtherAllowances = other_allowances !== undefined ? parseFloat(other_allowances) : parseFloat(sc.other_allowances);
+      const customDeductions = deductions !== undefined ? parseFloat(deductions) : parseFloat(sc.other_deductions);
+
+      const grossSalary = parseFloat(sc.basic_salary) + parseFloat(sc.hra) + parseFloat(sc.travel_allowance) + parseFloat(sc.medical_allowance) + customBonus + customOtherAllowances + parseFloat(sc.standard_allowance) + parseFloat(sc.leave_travel_allowance) + parseFloat(sc.fixed_allowance);
+      const netSalary = grossSalary - parseFloat(sc.provident_fund) - parseFloat(sc.professional_tax) - parseFloat(sc.income_tax) - customDeductions;
+
       // 2. Check if payroll was already approved/created for this employee this month
       const [existing] = await db.query(
         'SELECT * FROM payroll WHERE employee_id = ? AND pay_month = ? AND pay_year = ? LIMIT 1',
@@ -195,8 +213,10 @@ const payrollController = {
         
         // Update existing pending payroll row to Approved
         await db.query(
-          'UPDATE payroll SET status = ?, date = ? WHERE id = ?',
-          ['Approved', todayStr, existing[0].id]
+          `UPDATE payroll SET 
+            status = ?, date = ?, performance_bonus = ?, other_allowances = ?, other_deductions = ?, gross_salary = ?, net_salary = ? 
+           WHERE id = ?`,
+          ['Approved', todayStr, customBonus, customOtherAllowances, customDeductions, grossSalary, netSalary, existing[0].id]
         );
       } else {
         // Insert new payroll record
@@ -216,17 +236,17 @@ const payrollController = {
             sc.hra,
             sc.travel_allowance,
             sc.medical_allowance,
-            sc.performance_bonus,
-            sc.other_allowances,
+            customBonus,
+            customOtherAllowances,
             sc.standard_allowance,
             sc.leave_travel_allowance,
             sc.fixed_allowance,
             sc.provident_fund,
             sc.professional_tax,
             sc.income_tax,
-            sc.other_deductions,
-            sc.gross_salary,
-            sc.net_salary,
+            customDeductions,
+            grossSalary,
+            netSalary,
             'Approved'
           ]
         );
@@ -253,6 +273,60 @@ const payrollController = {
     } catch (err) {
       console.error('approvePayroll error:', err);
       return res.status(500).json({ message: 'Failed to approve payroll.' });
+    }
+  },
+
+  // PUT /api/payroll/:id/salary (Admin edit persistent salary config)
+  updateSalaryComponents: async (req, res) => {
+    const employeeId = req.params.id;
+    const { 
+      basic_salary, hra, travel_allowance, medical_allowance, other_allowances, 
+      performance_bonus, provident_fund, professional_tax, other_deductions 
+    } = req.body;
+
+    const companyId = req.user.employee ? req.user.employee.company_id : null;
+    if (!companyId) {
+      return res.status(400).json({ message: 'User is not associated with any company.' });
+    }
+
+    try {
+      // Verify employee belongs to admin's company
+      const [empProfile] = await db.query('SELECT company_id FROM employees WHERE id = ? LIMIT 1', [employeeId]);
+      if (empProfile.length === 0 || empProfile[0].company_id !== companyId) {
+        return res.status(403).json({ message: 'Access denied: employee belongs to a different company.' });
+      }
+
+      // Automatically calculate gross & net salary based on updated inputs
+      const basic = parseFloat(basic_salary) || 0;
+      const hraVal = parseFloat(hra) || 0;
+      const travel = parseFloat(travel_allowance) || 0;
+      const medical = parseFloat(medical_allowance) || 0;
+      const otherAll = parseFloat(other_allowances) || 0;
+      const bonus = parseFloat(performance_bonus) || 0;
+
+      const pf = parseFloat(provident_fund) || 0;
+      const profTax = parseFloat(professional_tax) || 0;
+      const otherDed = parseFloat(other_deductions) || 0;
+
+      const grossSalary = basic + hraVal + travel + medical + otherAll + bonus;
+      const netSalary = grossSalary - pf - profTax - otherDed;
+
+      await db.query(
+        `UPDATE salary_components SET 
+          basic_salary = ?, hra = ?, travel_allowance = ?, medical_allowance = ?, other_allowances = ?, 
+          performance_bonus = ?, provident_fund = ?, professional_tax = ?, other_deductions = ?,
+          gross_salary = ?, net_salary = ?
+         WHERE employee_id = ?`,
+        [basic, hraVal, travel, medical, otherAll, bonus, pf, profTax, otherDed, grossSalary, netSalary, employeeId]
+      );
+
+      // Audit Log
+      await logAction(req.user.id, 'Salary Configuration Updated', 'salary_components', employeeId);
+
+      return res.status(200).json({ success: true, message: 'Salary configuration updated successfully.' });
+    } catch (err) {
+      console.error('updateSalaryComponents error:', err);
+      return res.status(500).json({ message: 'Failed to update salary configuration.' });
     }
   },
 

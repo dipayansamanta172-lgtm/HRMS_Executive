@@ -25,6 +25,8 @@ import AdminEmployeeDetails from './pages/AdminEmployeeDetails';
 import AdminAttendance from './pages/AdminAttendance';
 import AdminLeaves from './pages/AdminLeaves';
 import AdminPayroll from './pages/AdminPayroll';
+import AdminActivity from './pages/AdminActivity';
+import AdminDepartments from './pages/AdminDepartments';
 import AdminProfile from './pages/AdminProfile';
 
 function App() {
@@ -56,7 +58,9 @@ function App() {
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="leaves" element={<AdminLeaves />} />
             <Route path="payroll" element={<AdminPayroll />} />
+            <Route path="departments" element={<AdminDepartments />} />
             <Route path="profile" element={<AdminProfile />} />
+            <Route path="activity" element={<AdminActivity />} />
           </Route>
 
           {/* Fallback redirect */}

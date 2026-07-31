@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS company (
     website VARCHAR(255),
     logo_url VARCHAR(500),
     payroll_budget DECIMAL(15,2) DEFAULT 0.00,
+    timezone VARCHAR(100) DEFAULT 'UTC',
+    currency VARCHAR(10) DEFAULT 'USD',
+    primary_color VARCHAR(50) DEFAULT '#B58863',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -31,13 +34,18 @@ CREATE TABLE IF NOT EXISTS users (
 -- 3. Departments Table
 CREATE TABLE IF NOT EXISTS departments (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    department_code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    department_code VARCHAR(50) NOT NULL,
+    description TEXT,
+    department_head INT,
+    status VARCHAR(50) DEFAULT 'Active',
     created_by INT,
     company_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
+    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_name_company (name, company_id),
+    UNIQUE KEY unique_code_company (department_code, company_id)
 );
 
 -- 4. Employees Table
@@ -68,6 +76,10 @@ CREATE TABLE IF NOT EXISTS employees (
     account_number VARCHAR(255) NULL,
     ifsc_code VARCHAR(255) NULL,
     upi_id VARCHAR(255) NULL,
+    manager_id INT NULL,
+    leave_balance INT DEFAULT 24,
+    designation VARCHAR(255) NULL,
+    employment_type VARCHAR(100) DEFAULT 'Full Time',
     -- Security clearance permissions assigned by HR/Admin
     security_clearance VARCHAR(255) DEFAULT 'Level 1 (Standard Employee)',
     role_clearance VARCHAR(255) DEFAULT 'Employee',
@@ -81,7 +93,8 @@ CREATE TABLE IF NOT EXISTS employees (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
+    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL,
+    FOREIGN KEY (manager_id) REFERENCES employees(id) ON DELETE SET NULL
 );
 
 -- 5. Attendance Table
@@ -93,7 +106,9 @@ CREATE TABLE IF NOT EXISTS attendance (
     check_out TIME,
     working_minutes INT DEFAULT 0,
     overtime_minutes INT DEFAULT 0,
-    status ENUM('Present', 'Late', 'Half Day', 'Leave', 'Absent') DEFAULT 'Present',
+    late_minutes INT DEFAULT 0,
+    early_departure_minutes INT DEFAULT 0,
+    status ENUM('Present', 'Late', 'Half Day', 'Leave', 'Absent', 'Holiday', 'Work From Home') DEFAULT 'Present',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
@@ -116,7 +131,7 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     end_date DATE NOT NULL,
     days INT NOT NULL,
     reason TEXT,
-    status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+    status ENUM('Pending', 'Approved', 'Rejected', 'Changes Requested') DEFAULT 'Pending',
     approved_by INT,
     approved_at DATETIME,
     rejection_reason TEXT,
@@ -210,10 +225,13 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 -- 12. Audit Logs Table
 CREATE TABLE IF NOT EXISTS audit_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NULL,
     user_id INT,
     action VARCHAR(255) NOT NULL,
     table_name VARCHAR(100),
     record_id VARCHAR(100),
+    severity ENUM('info', 'warning', 'danger', 'success') DEFAULT 'info',
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );

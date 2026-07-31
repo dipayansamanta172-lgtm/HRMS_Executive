@@ -24,6 +24,7 @@ export const AdminAttendance = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterDept, setFilterDept] = useState('All');
+  const [departments, setDepartments] = useState([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -44,7 +45,18 @@ export const AdminAttendance = () => {
         setLoading(false);
       }
     };
+
+    const fetchDepartments = async () => {
+      try {
+        const list = await api.getDepartments();
+        setDepartments(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('Failed to fetch departments:', err);
+      }
+    };
+
     fetchAttendance();
+    fetchDepartments();
   }, [selectedDate]);
 
   // Reset pagination to first page when filters change
@@ -255,12 +267,9 @@ export const AdminAttendance = () => {
             className={styles.filterSelect}
           >
             <option value="All">All Departments</option>
-            <option value="ENGINEERING">Engineering</option>
-            <option value="HUMAN RESOURCES">Human Resources</option>
-            <option value="FINANCE">Finance</option>
-            <option value="SALES">Sales</option>
-            <option value="MARKETING">Marketing</option>
-            <option value="PRODUCT">Product</option>
+            {departments.map(d => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
           </select>
 
           <button 

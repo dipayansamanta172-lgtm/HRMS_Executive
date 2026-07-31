@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const uploadController = require('../controllers/uploadController');
-const upload = require('../middleware/uploadMiddleware');
+const upload = require('../middleware/resumeUploadMiddleware');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Mount upload endpoint

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Badge, Button, Input } from '../components/UIElements';
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { UploadCloud, Download, Laptop, Smartphone, Edit2, Check, X, ShieldAlert } from 'lucide-react';
+import { UploadCloud, Download, Laptop, Smartphone, Edit2, Check, X, ShieldAlert, User } from 'lucide-react';
 import styles from './EmployeeProfile.module.css';
 
 export const EmployeeProfile = () => {
@@ -23,6 +23,7 @@ export const EmployeeProfile = () => {
     status: '',
     email: '',
     personal_email: '',
+    company_name: '',
     phone: '',
     location: '',
     emergency_contact: '',
@@ -92,6 +93,7 @@ export const EmployeeProfile = () => {
           status: data.status || '',
           email: data.personal_email || data.email || '',
           personal_email: data.personal_email || '',
+          company_name: data.company_name || '',
           phone: data.phone || '',
           location: data.location || '',
           emergency_contact: data.emergency_contact || '',
@@ -208,6 +210,38 @@ export const EmployeeProfile = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+      showToast('Please upload a valid image (JPG, PNG, WebP).', 'danger');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      showToast('Image size should be less than 5MB.', 'danger');
+      return;
+    }
+
+    showToast('Uploading profile picture...', 'info');
+    try {
+      const response = await api.uploadProfilePicture(file);
+      if (response.success && response.url) {
+        const updatedProfile = await api.getEmployeeProfile();
+        setProfileData(updatedProfile);
+        if (isEditMode) {
+           setEditBuffer(prev => ({ ...prev, photo: response.url }));
+        }
+        showToast('Profile picture uploaded successfully!', 'success');
+      }
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      const errMsg = err.response?.data?.message || 'Failed to upload image.';
+      showToast(errMsg, 'danger');
+    }
   };
 
   const handlePasswordChangeSubmit = (e) => {
@@ -351,15 +385,45 @@ export const EmployeeProfile = () => {
       
       {/* Profile Header Details card */}
       <div className={styles.profileCard}>
-        {(isEditMode ? editBuffer.photo : profileData.photo) && (
-          <img 
-            src={isEditMode ? editBuffer.photo : profileData.photo} 
-            alt={profileData.name} 
-            className={styles.avatar} 
-          />
-        )}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          {(isEditMode ? editBuffer.photo : profileData.photo) ? (
+            <img 
+              src={isEditMode ? editBuffer.photo : profileData.photo} 
+              alt={profileData.name || 'Not provided'} 
+              className={styles.avatar} 
+            />
+          ) : (
+            <div className={styles.avatar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)' }}>
+              <User size={32} />
+            </div>
+          )}
+          
+          <label style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px 10px',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            backgroundColor: 'transparent',
+            color: 'var(--primary-color)',
+            border: '1px solid var(--primary-color)',
+            borderRadius: 'var(--border-radius-sm)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}>
+            <UploadCloud size={14} style={{ marginRight: '4px' }} />
+            Change Picture
+            <input 
+              type="file" 
+              accept=".jpg,.jpeg,.png,.webp" 
+              onChange={handlePhotoUpload} 
+              style={{ display: 'none' }} 
+            />
+          </label>
+        </div>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '12px' }}>
           {isEditMode && profileData.user_role === 'admin' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <input 
@@ -370,31 +434,12 @@ export const EmployeeProfile = () => {
                 style={{ fontSize: '1.05rem', fontWeight: 700, padding: '4px 8px', maxWidth: '240px' }}
                 placeholder="Full Name"
               />
-              <input 
-                type="text" 
-                value={editBuffer.photo} 
-                onChange={(e) => handleInputChange('photo', e.target.value)}
-                className={styles.infoValue}
-                style={{ fontSize: '0.75rem', padding: '4px 8px', width: '280px' }}
-                placeholder="Profile Avatar URL"
-              />
             </div>
           ) : (
             <>
               <h3 className={styles.name}>{profileData.name || '--'}</h3>
               <p className={styles.role}>{profileData.role || '--'}</p>
             </>
-          )}
-          
-          {isEditMode && profileData.user_role !== 'admin' && (
-            <input 
-              type="text" 
-              value={editBuffer.photo} 
-              onChange={(e) => handleInputChange('photo', e.target.value)}
-              className={styles.infoValue}
-              style={{ fontSize: '0.75rem', padding: '4px 8px', width: '280px', marginTop: '6px' }}
-              placeholder="Profile Avatar URL"
-            />
           )}
         </div>
         
@@ -589,7 +634,7 @@ export const EmployeeProfile = () => {
 
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Company (Read-Only)</span>
-                <span className={styles.infoValue} style={{ opacity: 0.75 }}>Nexus HR Global</span>
+                <span className={styles.infoValue} style={{ opacity: 0.75 }}>{profileData.company_name || '--'}</span>
               </div>
 
               <div className={styles.infoRow}>

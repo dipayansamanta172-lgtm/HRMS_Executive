@@ -15,14 +15,22 @@ export const AdminEmployees = () => {
   const [staffStats, setStaffStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('');
+  const [departments, setDepartments] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
 
   // Form state for new employee
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
-  const [dept, setDept] = useState('ENGINEERING');
+  const [dept, setDept] = useState('');
   const [email, setEmail] = useState('');
   const [photo, setPhoto] = useState('');
+  const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
+  const [designation, setDesignation] = useState('');
+  const [employmentType, setEmploymentType] = useState('Full Time');
+  const [baseSalary, setBaseSalary] = useState('');
+  const [managerId, setManagerId] = useState('');
+  const [successData, setSuccessData] = useState(null);
 
   useEffect(() => {
     // Check if '?add=true' query parameter is present to open the modal
@@ -52,17 +60,45 @@ export const AdminEmployees = () => {
       }
     };
 
+    const fetchDepartments = async () => {
+      try {
+        const list = await api.getDepartments();
+        const activeDepts = Array.isArray(list) ? list.filter(d => d.status === 'Active') : [];
+        setDepartments(activeDepts);
+        if (activeDepts.length > 0 && !dept) {
+          setDept(activeDepts[0].id.toString());
+        }
+      } catch (err) {
+        console.error('Failed to fetch departments:', err);
+      }
+    };
+
     fetchEmployees();
     fetchStaffStats();
+    fetchDepartments();
   }, [searchParams, setSearchParams, searchQuery, selectedDept]);
 
   const handleAddEmployeeSubmit = async (e) => {
     e.preventDefault();
+
+    const phoneRegex = /^[0-9\s-]{7,15}$/;
+    if (!phoneRegex.test(phone)) {
+      showToast('Invalid phone number format.', 'danger');
+      return;
+    }
+
+    const fullPhone = `${countryCode} ${phone.trim()}`;
+
     const newEmp = {
       name,
       role,
       department: dept,
       email,
+      phone: fullPhone,
+      designation,
+      employmentType,
+      baseSalary,
+      managerId: managerId || null,
       photo: photo || null,
     };
 
@@ -75,11 +111,17 @@ export const AdminEmployees = () => {
         setRole('');
         setEmail('');
         setPhoto('');
+        setPhone('');
+        setDesignation('');
+        setBaseSalary('');
+        setManagerId('');
+        setSuccessData(res.employee || res);
         showToast('New employee added successfully!', 'success');
       }
     } catch (err) {
       console.error('Failed to add employee:', err);
-      showToast('Failed to add employee. Please try again.', 'danger');
+      const errMsg = err.response?.data?.message || 'Failed to add employee. Please try again.';
+      showToast(errMsg, 'danger');
     }
   };
 
@@ -129,10 +171,9 @@ export const AdminEmployees = () => {
             style={{ padding: '10px' }}
           >
             <option value="">All Departments</option>
-            <option value="ENGINEERING">Engineering</option>
-            <option value="PRODUCT">Product</option>
-            <option value="HUMAN RESOURCES">HR</option>
-            <option value="FINANCE">Finance</option>
+            {departments.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
           </select>
           
           <button 
@@ -265,24 +306,92 @@ export const AdminEmployees = () => {
             required 
           />
           <Input 
-            label="Job Title" 
-            placeholder="Sr. Product Designer" 
+            label="System Role (Admin/Employee)" 
+            placeholder="Employee" 
             value={role} 
             onChange={(e) => setRole(e.target.value)} 
             required 
           />
+          <Input 
+            label="Designation / Job Title" 
+            placeholder="Sr. Product Designer" 
+            value={designation} 
+            onChange={(e) => setDesignation(e.target.value)} 
+            required 
+          />
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Phone Number</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select 
+                value={countryCode} 
+                onChange={(e) => setCountryCode(e.target.value)}
+                className={styles.select}
+                style={{ width: '100px', padding: '10px', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+              >
+                <option value="+91">🇮🇳 +91</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+61">🇦🇺 +61</option>
+              </select>
+              <div style={{ flex: 1 }}>
+                <Input 
+                  type="tel"
+                  placeholder="9876543210" 
+                  value={phone} 
+                  onChange={(e) => setPhone(e.target.value)} 
+                  required 
+                />
+              </div>
+            </div>
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Employment Type</label>
+            <select 
+              value={employmentType} 
+              onChange={(e) => setEmploymentType(e.target.value)}
+              className={styles.select}
+              style={{ width: '100%', padding: '10px', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            >
+              <option value="Full Time">Full Time</option>
+              <option value="Part Time">Part Time</option>
+              <option value="Contract">Contract</option>
+              <option value="Internship">Internship</option>
+            </select>
+          </div>
+          <Input 
+            label="Base Salary (Monthly)" 
+            type="number"
+            placeholder="5000" 
+            value={baseSalary} 
+            onChange={(e) => setBaseSalary(e.target.value)} 
+            required 
+          />
+          <Input 
+            label="Manager ID" 
+            placeholder="Manager's Employee ID (Optional)" 
+            value={managerId} 
+            onChange={(e) => setManagerId(e.target.value)} 
+          />
           <div className={styles.formGroup}>
             <label className={styles.label}>Department</label>
-            <select 
-              value={dept} 
-              onChange={(e) => setDept(e.target.value)}
-              className={styles.select}
-            >
-              <option value="ENGINEERING">Engineering</option>
-              <option value="PRODUCT">Product</option>
-              <option value="HUMAN RESOURCES">HR</option>
-              <option value="FINANCE">Finance</option>
-            </select>
+            {departments.length === 0 ? (
+              <div style={{ padding: '12px', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', backgroundColor: 'var(--bg-input)' }}>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '12px', fontSize: '0.9rem' }}>No departments have been created yet.</p>
+                <Button variant="outline" onClick={() => navigate('/admin/departments')} style={{ width: '100%' }}>
+                  <Plus size={16} /> Create Department
+                </Button>
+              </div>
+            ) : (
+              <select 
+                value={dept} 
+                onChange={(e) => setDept(e.target.value)}
+                className={styles.select}
+              >
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            )}
           </div>
           <Input 
             label="Avatar Photo URL (Optional)" 
@@ -291,6 +400,49 @@ export const AdminEmployees = () => {
             onChange={(e) => setPhoto(e.target.value)} 
           />
         </form>
+      </Modal>
+
+      {/* Success Credentials Modal */}
+      <Modal
+        isOpen={!!successData}
+        onClose={() => setSuccessData(null)}
+        title="Employee Created Successfully"
+        footer={
+          <Button variant="primary" onClick={() => setSuccessData(null)} fullWidth>
+            Done
+          </Button>
+        }
+      >
+        {successData && (
+          <div style={{ padding: '16px', backgroundColor: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>Please share these temporary credentials with the employee securely. They will be prompted to change their password upon first login.</p>
+            <div style={{ display: 'grid', gap: '12px', fontSize: '0.95rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Employee ID</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{successData.employee_code}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Email (Username)</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{successData.email}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Password</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{successData.tempPassword}</span>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              fullWidth 
+              style={{ marginTop: '24px' }}
+              onClick={() => {
+                navigator.clipboard.writeText(`Employee ID: ${successData.employee_code}\nEmail: ${successData.email}\nPassword: ${successData.tempPassword}`);
+                showToast('Credentials copied to clipboard!', 'success');
+              }}
+            >
+              Copy Credentials
+            </Button>
+          </div>
+        )}
       </Modal>
     </div>
   );

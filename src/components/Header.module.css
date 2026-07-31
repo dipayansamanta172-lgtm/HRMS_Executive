@@ -60,7 +60,7 @@
 }
 
 .notificationBtn:hover {
-  background-color: var(--primary-light);
+  background-color: var(--primary-light-hover);
   color: var(--primary-color);
 }
 
@@ -151,7 +151,7 @@
 }
 
 .itemUnread {
-  background-color: var(--primary-light);
+  background-color: rgba(181, 136, 99, 0.08);
 }
 
 .itemHeaderRow {

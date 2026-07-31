@@ -11,5 +11,6 @@ router.use(roleMiddleware(['admin']));
 router.get('/stats', employeeController.getAdminStats);
 router.get('/staff-stats', employeeController.getStaffStats);
 router.get('/activity', employeeController.getAdminActivity);
+router.get('/activity/all', employeeController.getAllAdminActivity);
 
 module.exports = router;

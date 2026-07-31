@@ -222,18 +222,6 @@ export const AdminLeaves = () => {
         </div>
       </div>
 
-      {/* Approval Velocity Indigo Card */}
-      <div className={styles.velocityCard}>
-        <span className={styles.velocityLabel}>Approval Velocity</span>
-        <h3 className={styles.velocityValue}>--</h3>
-        <p className={styles.velocitySub}>
-          Average time to resolve a leave request. Data will populate from backend.
-        </p>
-        <div className={styles.velocityFooter}>
-          <span>Total Pending</span>
-          <span>{pendingCount}</span>
-        </div>
-      </div>
 
       {/* Team Availability Modal */}
       <Modal

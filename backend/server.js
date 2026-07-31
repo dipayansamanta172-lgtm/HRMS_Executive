@@ -39,6 +39,7 @@ const leaveRoutes = require('./routes/leaveRoutes');
 const payrollRoutes = require('./routes/payrollRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const profilePictureRoutes = require('./routes/profilePictureRoutes');
 
 // Mount REST API endpoints
 app.use('/api/auth', authRoutes);
@@ -50,6 +51,7 @@ app.use('/api/leaves', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/users/profile-picture', profilePictureRoutes);
 
 // Root Endpoint
 app.get('/', (req, res) => {

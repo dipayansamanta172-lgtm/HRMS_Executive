@@ -18,14 +18,14 @@ const employeeController = {
         FROM employees e
         LEFT JOIN departments d ON e.department_id = d.id
         LEFT JOIN users u ON e.user_id = u.id
-        WHERE e.company_id = ?
+        WHERE e.company_id = ? AND u.role = 'employee'
       `;
       const params = [companyId];
 
       if (search && search.trim() !== '') {
-        query += ' AND (e.name LIKE ? OR e.employee_code LIKE ? OR e.role LIKE ?)';
+        query += ' AND (e.name LIKE ? OR e.employee_code LIKE ? OR e.role LIKE ? OR u.email LIKE ? OR e.phone LIKE ? OR d.name LIKE ?)';
         const searchPattern = `%${search}%`;
-        params.push(searchPattern, searchPattern, searchPattern);
+        params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
       }
 
       if (department && department.trim() !== '') {
@@ -215,7 +215,7 @@ const employeeController = {
 
   // POST /api/employees (Admin add new employee + auto user creation)
   addEmployee: async (req, res) => {
-    const { name, email, role, department, photo } = req.body;
+    const { name, email, role, department, photo, designation, employmentType, baseSalary, managerId, phone } = req.body;
 
     if (!name || !email || !role || !department) {
       return res.status(400).json({ message: 'Name, email, role, and department are required fields.' });
@@ -238,12 +238,22 @@ const employeeController = {
       }
 
       // Check if department exists in this company
-      const [depts] = await conn.query('SELECT id FROM departments WHERE name = ? AND company_id = ? LIMIT 1', [department, companyId]);
+      const [depts] = await conn.query('SELECT id, name FROM departments WHERE id = ? AND company_id = ? LIMIT 1', [department, companyId]);
       if (depts.length === 0) {
         await conn.rollback();
-        return res.status(400).json({ message: 'Specified department does not exist in your company.' });
+        return res.status(400).json({ message: `Department does not exist in your company.` });
       }
       const departmentId = depts[0].id;
+      const departmentName = depts[0].name;
+
+      // Validate managerId if provided
+      if (managerId) {
+        const [managers] = await conn.query('SELECT id FROM employees WHERE id = ? AND company_id = ? LIMIT 1', [managerId, companyId]);
+        if (managers.length === 0) {
+          await conn.rollback();
+          return res.status(400).json({ message: 'Manager ID not found in your company.' });
+        }
+      }
 
       // 1. Create corresponding user record with default password 'Temp@123'
       const hashedPassword = await bcrypt.hash('Temp@123', 10);
@@ -263,7 +273,7 @@ const employeeController = {
           nextNumber = parseInt(match[1], 10) + 1;
         }
       }
-      const employeeCode = `EMP-${String(nextNumber).padStart(3, '0')}`;
+      const employeeCode = `EMP-${String(nextNumber).padStart(5, '0')}`;
 
       // 3. Create employee profile record with default permissions and company ID
       const {
@@ -281,8 +291,9 @@ const employeeController = {
         `INSERT INTO employees 
         (employee_code, user_id, name, role, department_id, status, photo, personal_email, join_date,
          security_clearance, role_clearance, department_access, payroll_permission, 
-         recruitment_permission, leave_permission, attendance_permission, employee_management_permission, company_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_DATE(), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         recruitment_permission, leave_permission, attendance_permission, employee_management_permission, company_id,
+         designation, employment_type, manager_id, phone) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_DATE(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           employeeCode,
           newUserId,
@@ -300,17 +311,22 @@ const employeeController = {
           leavePermission || 'Apply Only',
           attendancePermission || 'Check-in/Check-out Only',
           employeeManagementPermission || 'No Access',
-          companyId
+          companyId,
+          designation || null,
+          employmentType || 'Full Time',
+          managerId || null,
+          phone || null
         ]
       );
       const newEmpId = empResult.insertId;
 
       // 4. Initialize blank salary components for the new employee
+      const numericSalary = parseFloat(baseSalary) || 0.00;
       await conn.query(
         `INSERT INTO salary_components 
         (employee_id, basic_salary, hra, travel_allowance, medical_allowance, performance_bonus, other_allowances, provident_fund, professional_tax, other_deductions, gross_salary, net_salary) 
-        VALUES (?, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00)`,
-        [newEmpId]
+        VALUES (?, ?, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, ?, ?)`,
+        [newEmpId, numericSalary, numericSalary, numericSalary]
       );
 
       await conn.commit();
@@ -327,15 +343,21 @@ const employeeController = {
           user_id: newUserId,
           name,
           role,
-          department,
+          department: departmentName,
           status: 'Active',
           photo,
+          email,          // Added for frontend display
+          phone,          // Added for frontend display
+          designation,    // Added for frontend display
+          tempPassword: 'Temp@123' // Return temp password
         },
       });
     } catch (err) {
       await conn.rollback();
       console.error('addEmployee error:', err);
-      return res.status(500).json({ message: 'Failed to create employee profile.' });
+      // Detailed error fallback
+      const errorMsg = err.code === 'ER_DUP_ENTRY' ? 'Duplicate entry found (e.g. employee code or email).' : 'Failed to create employee profile.';
+      return res.status(500).json({ message: errorMsg });
     } finally {
       conn.release();
     }
@@ -384,7 +406,7 @@ const employeeController = {
       const employee = existing[0];
 
       // Check if department exists in this company
-      const [depts] = await conn.query('SELECT id FROM departments WHERE name = ? AND company_id = ? LIMIT 1', [department, companyId]);
+      const [depts] = await conn.query('SELECT id FROM departments WHERE id = ? AND company_id = ? LIMIT 1', [department, companyId]);
       if (depts.length === 0) {
         await conn.rollback();
         return res.status(400).json({ message: 'Department does not exist in your company.' });
@@ -510,14 +532,20 @@ const employeeController = {
 
     try {
       // 1. Total Employees
-      const [total] = await db.query("SELECT COUNT(*) AS count FROM employees WHERE status = 'Active' AND company_id = ?", [companyId]);
+      const [total] = await db.query(
+        `SELECT COUNT(*) AS count FROM employees e
+         JOIN users u ON e.user_id = u.id
+         WHERE e.status = 'Active' AND e.company_id = ? AND u.role = 'employee'`, 
+         [companyId]
+      );
       
       // 2. Present Today (checked-in today)
       const todayStr = new Date().toISOString().split('T')[0];
       const [present] = await db.query(
         `SELECT COUNT(*) AS count FROM attendance a
          JOIN employees e ON a.employee_id = e.id
-         WHERE a.date = ? AND a.status IN ('Present', 'Late', 'Half Day') AND e.company_id = ?`,
+         JOIN users u ON e.user_id = u.id
+         WHERE a.date = ? AND a.status IN ('Present', 'Late', 'Half Day') AND e.company_id = ? AND u.role = 'employee'`,
         [todayStr, companyId]
       );
 
@@ -541,7 +569,12 @@ const employeeController = {
       const attendees = present[0].count || 0;
       const attendeeRate = headcount > 0 ? Math.round((attendees / headcount) * 100) : 0;
 
+      // 5. Company Name
+      const [comp] = await db.query("SELECT name FROM company WHERE id = ?", [companyId]);
+      const companyName = comp.length > 0 ? comp[0].name : 'Admin';
+
       return res.status(200).json({
+        companyName,
         totalEmployees: headcount,
         totalEmployeesChange: '+2 MTD',
         presentToday: attendees,
@@ -620,13 +653,13 @@ const employeeController = {
 
     try {
       const [logs] = await db.query(
-        `SELECT l.id, l.action AS title, l.timestamp AS time, e.name AS employeeName, e.photo AS userPhoto
+        `SELECT l.id, l.action AS title, l.timestamp AS time, l.severity, e.name AS employeeName, e.photo AS userPhoto
          FROM audit_logs l
          LEFT JOIN users u ON l.user_id = u.id
          LEFT JOIN employees e ON u.id = e.user_id
-         WHERE e.company_id = ?
-         ORDER BY l.id DESC LIMIT 10`,
-         [companyId]
+         WHERE l.company_id = ? OR e.company_id = ?
+         ORDER BY l.id DESC LIMIT 5`,
+         [companyId, companyId]
       );
 
       // Format audit log items for RecentActivityList format
@@ -652,7 +685,8 @@ const employeeController = {
           title: item.employeeName ? `${item.employeeName}: ${item.title}` : item.title,
           time: timeStr,
           type,
-          userPhoto: item.userPhoto
+          userPhoto: item.userPhoto,
+          severity: item.severity || 'info'
         };
       });
 
@@ -660,6 +694,50 @@ const employeeController = {
     } catch (err) {
       console.error('getAdminActivity error:', err);
       return res.status(500).json({ message: 'Failed to query activity logs.' });
+    }
+  },
+
+  // GET /api/admin/activity/all (HR Full Activity Log, isolated by company)
+  getAllAdminActivity: async (req, res) => {
+    const companyId = req.user.employee ? req.user.employee.company_id : null;
+    if (!companyId) {
+      return res.status(400).json({ message: 'User is not associated with any company.' });
+    }
+
+    try {
+      const [logs] = await db.query(
+        `SELECT l.id, l.action AS title, l.timestamp AS time, l.severity, e.name AS employeeName, e.photo AS userPhoto
+         FROM audit_logs l
+         LEFT JOIN users u ON l.user_id = u.id
+         LEFT JOIN employees e ON u.id = e.user_id
+         WHERE l.company_id = ? OR e.company_id = ?
+         ORDER BY l.id DESC LIMIT 100`,
+         [companyId, companyId]
+      );
+
+      const formatted = logs.map(item => {
+        let type = 'check_in';
+        if (item.title.includes('Employee Created')) type = 'new_hire';
+        if (item.title.includes('Leave')) type = 'leave_approve';
+        if (item.title.includes('Payroll')) type = 'payroll';
+
+        const dateObj = new Date(item.time);
+        const timeStr = dateObj.toLocaleString();
+
+        return {
+          id: String(item.id),
+          title: item.employeeName ? `${item.employeeName}: ${item.title}` : item.title,
+          time: timeStr,
+          type,
+          userPhoto: item.userPhoto,
+          severity: item.severity || 'info'
+        };
+      });
+
+      return res.status(200).json(formatted);
+    } catch (err) {
+      console.error('getAllAdminActivity error:', err);
+      return res.status(500).json({ message: 'Failed to query all activity logs.' });
     }
   },
 
@@ -671,7 +749,7 @@ const employeeController = {
         `SELECT l.id, l.action AS title, l.timestamp AS time
          FROM audit_logs l
          WHERE l.user_id = ?
-         ORDER BY l.id DESC LIMIT 10`,
+         ORDER BY l.id DESC LIMIT 5`,
         [userId]
       );
 

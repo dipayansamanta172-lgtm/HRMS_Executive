@@ -16,7 +16,8 @@ export const AdminEmployeeDetails = () => {
   // Edit modal states
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
-  const [dept, setDept] = useState('ENGINEERING');
+  const [dept, setDept] = useState('');
+  const [departments, setDepartments] = useState([]);
   const [email, setEmail] = useState('');
   const [salary, setSalary] = useState('');
   const [status, setStatus] = useState('Active');
@@ -42,7 +43,7 @@ export const AdminEmployeeDetails = () => {
           setEmployee(found);
           setName(found.name || '');
           setRole(found.role || '');
-          setDept(found.department || 'ENGINEERING');
+          setDept(found.department_id ? found.department_id.toString() : '');
           setEmail(found.email || '');
           setSalary(found.salary_breakdown ? found.salary_breakdown.basic_salary : '0');
           setStatus(found.status || 'Active');
@@ -63,7 +64,18 @@ export const AdminEmployeeDetails = () => {
         setLoading(false);
       }
     };
+
+    const fetchDepartments = async () => {
+      try {
+        const list = await api.getDepartments();
+        setDepartments(Array.isArray(list) ? list.filter(d => d.status === 'Active') : []);
+      } catch (err) {
+        console.error('Failed to fetch departments:', err);
+      }
+    };
+
     fetchEmployee();
+    fetchDepartments();
   }, [id]);
 
   const handleUpdateSubmit = async (e) => {
@@ -384,10 +396,10 @@ export const AdminEmployeeDetails = () => {
                 onChange={(e) => setDept(e.target.value)}
                 className={styles.select}
               >
-                <option value="ENGINEERING">Engineering</option>
-                <option value="PRODUCT">Product</option>
-                <option value="HUMAN RESOURCES">HR</option>
-                <option value="FINANCE">Finance</option>
+                <option value="">-- Select Department --</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
               </select>
             </div>
           </div>

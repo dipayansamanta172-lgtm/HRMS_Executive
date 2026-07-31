@@ -111,11 +111,12 @@ const attendanceController = {
     const today = new Date().toISOString().split('T')[0];
     const nowTimeStr = new Date().toTimeString().split(' ')[0]; // HH:MM:SS
 
-    // Determine status (Late if after 09:15 AM)
+    // Determine status (Late if after 09:00 AM)
     const [hours, minutes] = nowTimeStr.split(':').map(Number);
     const checkInMins = hours * 60 + minutes;
-    const lateThreshold = 9 * 60 + 15; // 09:15 AM
-    const status = checkInMins > lateThreshold ? 'Late' : 'Present';
+    const lateThreshold = 9 * 60; // 09:00 AM
+    const lateMinutes = Math.max(0, checkInMins - lateThreshold);
+    const status = lateMinutes > 0 ? 'Late' : 'Present';
 
     try {
       // Check if already checked in today
@@ -129,8 +130,8 @@ const attendanceController = {
       }
 
       await db.query(
-        'INSERT INTO attendance (employee_id, date, check_in, status) VALUES (?, ?, ?, ?)',
-        [empId, today, nowTimeStr, status]
+        'INSERT INTO attendance (employee_id, date, check_in, status, late_minutes) VALUES (?, ?, ?, ?, ?)',
+        [empId, today, nowTimeStr, status, lateMinutes]
       );
 
       // Audit log
@@ -181,6 +182,12 @@ const attendanceController = {
       const standardShiftMins = 480; // 8 hours
       const overtimeMins = Math.max(0, diffMins - standardShiftMins);
 
+      // Determine early departure (before 05:00 PM)
+      const [outHours, outMinutes] = nowTimeStr.split(':').map(Number);
+      const checkOutMins = outHours * 60 + outMinutes;
+      const earlyDepartureThreshold = 17 * 60; // 05:00 PM
+      const earlyDepartureMinutes = Math.max(0, earlyDepartureThreshold - checkOutMins);
+
       // If check-in was late but total hours fit, preserve status or adjust status
       let finalStatus = attendanceRow.status;
       if (diffMins < 240) {
@@ -192,9 +199,10 @@ const attendanceController = {
           check_out = ?, 
           working_minutes = ?, 
           overtime_minutes = ?,
+          early_departure_minutes = ?,
           status = ?
          WHERE id = ?`,
-        [nowTimeStr, diffMins, overtimeMins, finalStatus, attendanceRow.id]
+        [nowTimeStr, diffMins, overtimeMins, earlyDepartureMinutes, finalStatus, attendanceRow.id]
       );
 
       // Audit log

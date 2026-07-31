@@ -84,30 +84,25 @@
   object-fit: cover;
 }
 
-/* Icon badges for activities */
-.badgeNewHire {
-  background-color: #e2f0fd;
+/* Icon badges for activities based on severity */
+.badgeInfo {
+  background-color: var(--bg-badge-info);
   color: var(--info);
 }
 
-.badgeApproval {
-  background-color: #eef2ff;
+.badgeWarning {
+  background-color: var(--bg-badge-warning);
   color: var(--primary-color);
 }
 
-.badgeLeave {
-  background-color: #fef2f2;
+.badgeDanger {
+  background-color: var(--bg-badge-danger);
   color: var(--danger);
 }
 
-.badgeCheckIn {
-  background-color: #ecfdf5;
+.badgeSuccess {
+  background-color: var(--bg-badge-success);
   color: var(--success);
-}
-
-.badgePayroll {
-  background-color: #eff6ff;
-  color: var(--info);
 }
 
 .textSection {

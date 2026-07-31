@@ -40,17 +40,22 @@ const authMiddleware = async (req, res, next) => {
 
     const user = users[0];
 
-    // Load employee profile details joined with departments and salary components
+    // Load employee profile details joined with departments, salary components, and company
     const [employees] = await db.query(
       `SELECT e.*, d.name AS department, d.department_code,
               sc.basic_salary, sc.hra, sc.travel_allowance, sc.medical_allowance, 
               sc.performance_bonus, sc.other_allowances, sc.standard_allowance, 
               sc.leave_travel_allowance, sc.fixed_allowance, sc.provident_fund, 
               sc.professional_tax, sc.income_tax, sc.other_deductions, 
-              sc.gross_salary, sc.net_salary
+              sc.gross_salary, sc.net_salary,
+              c.name AS company_name, c.logo_url AS company_logo, 
+              c.address AS company_address, c.phone AS company_phone, 
+              c.timezone AS company_timezone, c.currency AS company_currency, 
+              c.primary_color AS company_primary_color
        FROM employees e
        LEFT JOIN departments d ON e.department_id = d.id
        LEFT JOIN salary_components sc ON e.id = sc.employee_id
+       LEFT JOIN company c ON e.company_id = c.id
        WHERE e.user_id = ? LIMIT 1`,
       [user.id]
     );

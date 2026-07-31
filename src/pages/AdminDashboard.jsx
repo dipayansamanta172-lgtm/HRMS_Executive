@@ -62,7 +62,7 @@ export const AdminDashboard = () => {
       {/* Welcome Message */}
       <div className={styles.welcomeSection}>
         <span className={styles.welcomeSub}>Welcome back,</span>
-        <h2 className={styles.welcomeTitle}>Admin</h2>
+        <h2 className={styles.welcomeTitle}>{stats?.companyName || 'Admin'}</h2>
       </div>
 
       {/* Stats Cards Grid */}
@@ -104,57 +104,8 @@ export const AdminDashboard = () => {
         title="Recent Activity" 
         activities={activities} 
         interactive={false}
+        onViewAll={() => navigate('/admin/activity')}
       />
-
-      {/* Admin Actions shortcuts */}
-      <div className={styles.actionsSection}>
-        <h3 className={styles.actionsHeader}>Admin Actions</h3>
-        <div className={styles.actionsGrid}>
-          <button 
-            type="button" 
-            className={styles.actionBtn}
-            onClick={() => handleActionClick('/admin/employees')}
-          >
-            <div className={styles.actionIconWrapper}>
-              <ShieldCheck size={22} />
-            </div>
-            <span className={styles.actionLabel}>Access</span>
-          </button>
-
-          <button 
-            type="button" 
-            className={styles.actionBtn}
-            onClick={() => handleActionClick('/admin/payroll')}
-          >
-            <div className={styles.actionIconWrapper}>
-              <FileText size={22} />
-            </div>
-            <span className={styles.actionLabel}>Reports</span>
-          </button>
-
-          <button 
-            type="button" 
-            className={styles.actionBtn}
-            onClick={() => handleActionClick('/admin/leaves')}
-          >
-            <div className={styles.actionIconWrapper}>
-              <Megaphone size={22} />
-            </div>
-            <span className={styles.actionLabel}>Alert</span>
-          </button>
-
-          <button 
-            type="button" 
-            className={styles.actionBtn}
-            onClick={() => showToast('Additional admin settings module', 'info')}
-          >
-            <div className={styles.actionIconWrapper}>
-              <MoreHorizontal size={22} />
-            </div>
-            <span className={styles.actionLabel}>Misc</span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 };

@@ -59,6 +59,11 @@ export const api = {
     return res.data;
   },
 
+  getAllAdminActivity: async () => {
+    const res = await client.get('/admin/activity/all');
+    return res.data;
+  },
+
   getEmployeeActivity: async () => {
     const res = await client.get('/employees/me/activity');
     return res.data;
@@ -89,6 +94,27 @@ export const api = {
 
   getStaffStats: async () => {
     const res = await client.get('/admin/staff-stats');
+    return res.data;
+  },
+
+  // ─── Department Operations ───────────────────────────────────────────────────
+  getDepartments: async () => {
+    const res = await client.get('/departments');
+    return res.data;
+  },
+
+  createDepartment: async (deptData) => {
+    const res = await client.post('/departments', deptData);
+    return res.data;
+  },
+
+  updateDepartment: async (id, deptData) => {
+    const res = await client.put(`/departments/${id}`, deptData);
+    return res.data;
+  },
+
+  deleteDepartment: async (id) => {
+    const res = await client.delete(`/departments/${id}`);
     return res.data;
   },
 
@@ -160,8 +186,13 @@ export const api = {
     return res.data;
   },
 
-  approvePayroll: async (employeeId) => {
-    const res = await client.put(`/payroll/${employeeId}/approve`);
+  approvePayroll: async (employeeId, payload) => {
+    const res = await client.put(`/payroll/${employeeId}/approve`, payload);
+    return res.data;
+  },
+
+  updateSalaryComponents: async (employeeId, components) => {
+    const res = await client.put(`/payroll/${employeeId}/salary`, components);
     return res.data;
   },
 
@@ -200,6 +231,17 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
     const res = await client.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
+
+  uploadProfilePicture: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.put('/users/profile-picture', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -11,6 +11,29 @@ export const AdminLayout = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const newState = !prev;
+      localStorage.setItem('sidebar_collapsed', String(newState));
+      return newState;
+    });
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     const fetchAdminProfile = async () => {
       try {
@@ -56,16 +79,23 @@ export const AdminLayout = () => {
   const employeeData = {
     name: profile?.name || 'Administrator',
     photo: profile?.photo || '',
-    role: profile?.role || 'HR Admin'
+    role: profile?.role || 'HR Admin',
+    company_name: profile?.company_name || '',
+    company_logo: profile?.company_logo || ''
   };
 
   return (
     <div className={styles.layout}>
-      <Sidebar userRole="admin" employeeData={employeeData} />
+      <Sidebar 
+        userRole="admin" 
+        employeeData={employeeData} 
+        isCollapsed={sidebarCollapsed} 
+        onToggle={toggleSidebar} 
+      />
       
-      <div className={styles.contentWrapper}>
+      <div className={`${styles.contentWrapper} ${sidebarCollapsed ? styles.contentWrapperCollapsed : ''}`}>
         <Header 
-          title="HRMS Global" 
+          title="Executive" 
           userPhoto={employeeData.photo} 
           userRole="admin" 
         />

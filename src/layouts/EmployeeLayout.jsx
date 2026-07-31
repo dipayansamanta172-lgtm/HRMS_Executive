@@ -12,6 +12,29 @@ export const EmployeeLayout = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const newState = !prev;
+      localStorage.setItem('sidebar_collapsed', String(newState));
+      return newState;
+    });
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -42,7 +65,7 @@ export const EmployeeLayout = () => {
     if (path.includes('/employee/leave')) return "Leaves";
     if (path.includes('/employee/salary')) return "Salary";
     if (path.includes('/employee/profile')) return "Profile";
-    return "Nexus HR"; // Default for dashboard
+    return "Executive"; // Default for dashboard
   };
 
   if (loading) {
@@ -64,14 +87,21 @@ export const EmployeeLayout = () => {
   const employeeData = {
     name: profile?.name || 'Employee',
     photo: profile?.photo || '',
-    role: profile?.role || 'Staff Member'
+    role: profile?.role || 'Staff Member',
+    company_name: profile?.company_name || '',
+    company_logo: profile?.company_logo || ''
   };
 
   return (
     <div className={styles.layout}>
-      <Sidebar userRole="employee" employeeData={employeeData} />
+      <Sidebar 
+        userRole="employee" 
+        employeeData={employeeData} 
+        isCollapsed={sidebarCollapsed} 
+        onToggle={toggleSidebar} 
+      />
       
-      <div className={styles.contentWrapper}>
+      <div className={`${styles.contentWrapper} ${sidebarCollapsed ? styles.contentWrapperCollapsed : ''}`}>
         <Header 
           title={getHeaderTitle()} 
           userPhoto={employeeData.photo} 

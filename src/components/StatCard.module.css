@@ -41,17 +41,17 @@
 }
 
 .iconSuccess {
-  background-color: #ecfdf5;
+  background-color: var(--bg-badge-success);
   color: var(--success);
 }
 
 .iconDanger {
-  background-color: #fef2f2;
+  background-color: var(--bg-badge-danger);
   color: var(--danger);
 }
 
 .iconWarning {
-  background-color: #fffbeb;
+  background-color: var(--bg-badge-warning);
   color: var(--warning);
 }
 

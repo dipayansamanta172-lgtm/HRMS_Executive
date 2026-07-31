@@ -16,5 +16,6 @@ router.put('/budget', roleMiddleware(['admin']), payrollController.updateBudget)
 // Admin-only payroll processing routes
 router.get('/', roleMiddleware(['admin']), payrollController.getAdminPayroll);
 router.put('/:id/approve', roleMiddleware(['admin']), payrollController.approvePayroll);
+router.put('/:id/salary', roleMiddleware(['admin']), payrollController.updateSalaryComponents);
 
 module.exports = router;

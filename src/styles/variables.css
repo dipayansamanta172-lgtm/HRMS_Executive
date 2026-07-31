@@ -1,35 +1,35 @@
 :root {
-  /* Colors */
-  --primary-color: #3b2cd4;
-  --primary-hover: #2b1eb3;
-  --primary-light: #eef2ff;
-  --primary-light-hover: #e0e7ff;
+  /* Colors - Enterprise Dark Theme */
+  --primary-color: #B58863;
+  --primary-hover: #a37854;
+  --primary-light: #1c1d1e;
+  --primary-light-hover: #292a2b;
   
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --text-light: #ffffff;
+  --text-primary: #e3e2e3;
+  --text-secondary: #c3c7cb;
+  --text-muted: #8d9195;
+  --text-light: #121314; /* Dark text for contrast on gold buttons */
   
-  --bg-main: #f5f7fb;
-  --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --bg-badge-success: #ecfdf5;
-  --bg-badge-danger: #fef2f2;
-  --bg-badge-warning: #fffbeb;
-  --bg-badge-info: #eff6ff;
+  --bg-main: #121314;
+  --bg-card: #1c1d1e;
+  --bg-input: #141516;
+  --bg-badge-success: rgba(78, 175, 133, 0.15);
+  --bg-badge-danger: rgba(218, 93, 93, 0.15);
+  --bg-badge-warning: rgba(228, 192, 161, 0.15);
+  --bg-badge-info: rgba(179, 202, 217, 0.15);
   
-  --success: #10b981;
-  --success-dark: #059669;
-  --danger: #ef4444;
-  --danger-dark: #dc2626;
-  --warning: #f59e0b;
-  --info: #3b82f6;
+  --success: #4eaf85;
+  --success-dark: #409c73;
+  --danger: #da5d5d;
+  --danger-dark: #cf4b4b;
+  --warning: #e4c0a1;
+  --info: #b3cad9;
   
-  --border-color: #e2e8f0;
-  --border-focus: #3b2cd4;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-focus: #B58863;
   
   /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
   /* Layout constraints */
   --border-radius-sm: 6px;
@@ -38,10 +38,10 @@
   --border-radius-full: 9999px;
   
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
   
   /* Transitions */
   --transition-fast: 0.15s ease;

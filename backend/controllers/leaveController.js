@@ -149,8 +149,8 @@ const leaveController = {
     const { id } = req.params;
     const { status, rejectionReason } = req.body;
 
-    if (!status || !['Approved', 'Rejected'].includes(status)) {
-      return res.status(400).json({ message: 'Status must be Approved or Rejected.' });
+    if (!status || !['Approved', 'Rejected', 'Changes Requested'].includes(status)) {
+      return res.status(400).json({ message: 'Status must be Approved, Rejected, or Changes Requested.' });
     }
 
     const companyId = req.user.employee ? req.user.employee.company_id : null;
@@ -184,6 +184,9 @@ const leaveController = {
         if (today >= startStr && today <= endStr) {
           await db.query('UPDATE employees SET status = ? WHERE id = ?', ['On Leave', leaveReq.employee_id]);
         }
+
+        // Deduct leave balance
+        await db.query('UPDATE employees SET leave_balance = GREATEST(0, leave_balance - ?) WHERE id = ?', [leaveReq.days, leaveReq.employee_id]);
       }
 
       await db.query(

@@ -72,10 +72,17 @@ async function runSeed() {
     
     // Company Table Payroll Budget Migration
     await addColumnIfNotExists(connection, dbName, 'company', 'payroll_budget', 'DECIMAL(15,2) DEFAULT 0.00');
+    await addColumnIfNotExists(connection, dbName, 'company', 'timezone', "VARCHAR(100) DEFAULT 'UTC'");
+    await addColumnIfNotExists(connection, dbName, 'company', 'currency', "VARCHAR(10) DEFAULT 'USD'");
+    await addColumnIfNotExists(connection, dbName, 'company', 'primary_color', "VARCHAR(50) DEFAULT '#B58863'");
 
     // Employees & Departments company_id Migrations
     await addColumnIfNotExists(connection, dbName, 'employees', 'company_id', 'INT NULL');
     await addColumnIfNotExists(connection, dbName, 'departments', 'company_id', 'INT NULL');
+    await addColumnIfNotExists(connection, dbName, 'employees', 'manager_id', 'INT NULL');
+    await addColumnIfNotExists(connection, dbName, 'employees', 'leave_balance', 'INT DEFAULT 24');
+    await addColumnIfNotExists(connection, dbName, 'employees', 'designation', 'VARCHAR(255) NULL');
+    await addColumnIfNotExists(connection, dbName, 'employees', 'employment_type', "VARCHAR(100) DEFAULT 'Full Time'");
 
     // Employees Table Bank Details Migrations
     await addColumnIfNotExists(connection, dbName, 'employees', 'bank_name', 'VARCHAR(255) NULL');
@@ -106,6 +113,17 @@ async function runSeed() {
       await addColumnIfNotExists(connection, dbName, 'salary_components', col.name, col.def);
       await addColumnIfNotExists(connection, dbName, 'payroll', col.name, col.def);
     }
+
+    // Attendance & Leave Enum Migrations
+    await addColumnIfNotExists(connection, dbName, 'attendance', 'late_minutes', 'INT DEFAULT 0');
+    await addColumnIfNotExists(connection, dbName, 'attendance', 'early_departure_minutes', 'INT DEFAULT 0');
+    
+    console.log('Updating Enums...');
+    await connection.query("ALTER TABLE `attendance` MODIFY COLUMN `status` ENUM('Present', 'Late', 'Half Day', 'Leave', 'Absent', 'Holiday', 'Work From Home') DEFAULT 'Present'");
+    await connection.query("ALTER TABLE `leave_requests` MODIFY COLUMN `status` ENUM('Pending', 'Approved', 'Rejected', 'Changes Requested') DEFAULT 'Pending'");
+    
+    await addColumnIfNotExists(connection, dbName, 'audit_logs', 'company_id', 'INT NULL');
+
     console.log('Database migrations completed.');
 
     // Seed default company
